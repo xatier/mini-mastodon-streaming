@@ -1,0 +1,91 @@
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <title>Mini Mastodon streaming client</title>
+  </head>
+  <body>
+    <button>Close the connection</button>
+
+    <div id="timeline"></div>
+
+    <script>
+      const server = "SERVER_URL"
+      const api = `https://${server}/api/v1/streaming/public/local`
+      const TIMELINE_SIZE = 500
+
+      let stream = new EventSource(api)
+      let timeline = document.getElementById("timeline")
+
+      stream.onopen = function () {
+        console.log(`Open connection to server: ${server}.`)
+      }
+
+      stream.addEventListener("update", (event) => {
+        const payload = JSON.parse(event.data)
+
+        let toot = {
+          id: payload.id,
+          created_at: payload.created_at,
+          text: payload.content,
+          name: payload.account.username,
+          nick: payload.account.display_name,
+          url: payload.url,
+          app: payload.application
+            ? payload.application.name
+            : "unknown client",
+          media: payload.media_attachments,
+        }
+
+        function parseHTML(html) {
+          let t = document.createElement("template")
+          t.innerHTML = html
+          return t.content
+        }
+
+        let newElement = document.createElement("div")
+        newElement.innerHTML = `
+          <b>${toot.nick}</b> (@${toot.name}) <a href="${toot.url}">${toot.created_at}</a> via ${toot.app}
+        `
+
+        // toot text
+        newElement.appendChild(parseHTML(toot.text))
+
+        // media links
+        if (toot.media) {
+          newElement.appendChild(parseHTML("<br>"))
+        }
+        toot.media.forEach((media) => {
+          if (media.type === "image") {
+            let img = document.createElement("img")
+            img.src = media.preview_url
+            newElement.appendChild(img)
+          } else {
+            console.log(media)
+            let a = document.createElement("a")
+            a.href = media.url
+            a.textContent = media.url
+            newElement.appendChild(a)
+          }
+        })
+
+        newElement.appendChild(parseHTML("<hr>"))
+        timeline.prepend(newElement)
+
+        // keep at max TIMELINE_SIZE toots
+        while (timeline.childElementCount > TIMELINE_SIZE) {
+          timeline.removeChild(timeline.lastChild)
+        }
+      })
+
+      stream.onerror = function () {
+        console.log("EventSource failed.")
+      }
+
+      let button = document.querySelector("button")
+      button.onclick = function () {
+        console.log("Connection closed")
+        stream.close()
+      }
+    </script>
+  </body>
+</html>
