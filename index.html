@@ -13,11 +13,19 @@
       const api = `https://${server}/api/v1/streaming/public/local`
       const TIMELINE_SIZE = 500
 
+      // $ cat muted_accounts.csv | tail -n +2 | awk -F, 'BEGIN{ORS=", "} {print "\""$1"\""}'
+      const muted = new Set([
+      ])
+
+      // $ echo 'xxx' | awk 'BEGIN{ORS="|"} {print $1}'
+      const filter =
+        /为|书|买|们|兴|卫|发|头|对|带|开|忆|样|汉|爱|现|种|经|给|见|认|记|识|说|败|边|过|还|这|进|长|问|陆|难|页|饭|鸡|个|梦|网|达|🟩/
+
       let stream = new EventSource(api)
       let timeline = document.getElementById("timeline")
 
       stream.onopen = function () {
-        console.log(`Open connection to server: ${server}.`)
+        console.log(`[+] Open connection to server: ${server}.`)
       }
 
       stream.addEventListener("update", (event) => {
@@ -29,11 +37,25 @@
           text: payload.content,
           name: payload.account.username,
           nick: payload.account.display_name,
+          home: payload.account.url,
+          avatar: payload.account.avatar,
           url: payload.url,
           app: payload.application
             ? payload.application.name
             : "unknown client",
           media: payload.media_attachments,
+        }
+
+        // ignore muted accounts
+        if (muted.has(`${toot.name}@${server}`)) {
+          console.log(`[-] Ignore muted account: ${toot.name}@${server}`)
+          return
+        }
+
+        // ignore toots with filtered words
+        if (toot.text.match(filter)) {
+          console.log(`[-] Ignore filtered toot: ${toot.text}`)
+          return
         }
 
         function parseHTML(html) {
@@ -44,7 +66,10 @@
 
         let newElement = document.createElement("div")
         newElement.innerHTML = `
-          <b>${toot.nick}</b> (@${toot.name}) <a href="${toot.url}">${toot.created_at}</a> via ${toot.app}
+          <img src="${toot.avatar}" width="64" height="64" />
+          <b>${toot.nick}</b> (@${toot.name}@${server})
+          <a href="${toot.home}" target="_blank">🏠</a>
+          <a href="${toot.url}" target="_blank">${toot.created_at}</a> via ${toot.app}
         `
 
         // toot text
@@ -60,7 +85,7 @@
             img.src = media.preview_url
             newElement.appendChild(img)
           } else {
-            console.log(media)
+            console.log(`[-] Unknown media: ${media.type} ${media.url}`)
             let a = document.createElement("a")
             a.href = media.url
             a.textContent = media.url
@@ -78,12 +103,12 @@
       })
 
       stream.onerror = function () {
-        console.log("EventSource failed.")
+        console.log("[-] EventSource failed.")
       }
 
       let button = document.querySelector("button")
       button.onclick = function () {
-        console.log("Connection closed")
+        console.log("[+] Connection closed")
         stream.close()
       }
     </script>
