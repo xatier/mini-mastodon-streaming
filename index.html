@@ -76,7 +76,7 @@
         newElement.appendChild(parseHTML(toot.text))
 
         // media links
-        if (toot.media) {
+        if (toot.media.length) {
           newElement.appendChild(parseHTML("<br>"))
         }
         toot.media.forEach((media) => {
