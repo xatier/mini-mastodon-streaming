@@ -84,10 +84,18 @@
             let img = document.createElement("img")
             img.src = media.preview_url
             newElement.appendChild(img)
+          } else if (media.type === "video") {
+            let video = document.createElement("video")
+            video.src = media.url
+            video.height = 240
+            video.width = 320
+            video.controls = true
+            newElement.appendChild(video)
           } else {
             console.log(`[-] Unknown media: ${media.type} ${media.url}`)
             let a = document.createElement("a")
             a.href = media.url
+            a.target = "_blank"
             a.textContent = media.url
             newElement.appendChild(a)
           }
