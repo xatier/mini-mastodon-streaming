@@ -35,6 +35,7 @@
           id: payload.id,
           created_at: payload.created_at,
           text: payload.content,
+          emojis: payload.emojis,
           name: payload.account.username,
           nick: payload.account.display_name,
           home: payload.account.url,
@@ -66,14 +67,26 @@
 
         let newElement = document.createElement("div")
         newElement.innerHTML = `
-          <img src="${toot.avatar}" width="64" height="64" />
+          <img src="${toot.avatar}" width="64" height="64">
           <b>${toot.nick}</b> (@${toot.name}@${server})
           <a href="${toot.home}" target="_blank">🏠</a>
           <a href="${toot.url}" target="_blank">${toot.created_at}</a> via ${toot.app}
         `
 
+        // replace :shortcode: in toot text if any
+        let formattedToot = toot.text
+        if (toot.emojis && toot.emojis.length > 0) {
+          toot.emojis.forEach((emoji) => {
+            const quotedEmoji = `:${emoji.shortcode}:`
+            formattedToot = formattedToot.replaceAll(
+              quotedEmoji,
+              `<img alt="${quotedEmoji}" title="${quotedEmoji}" src="${emoji.url}" width="20" height="20">`
+            )
+          })
+        }
+
         // toot text
-        newElement.appendChild(parseHTML(toot.text))
+        newElement.appendChild(parseHTML(formattedToot))
 
         // media links
         if (toot.media.length) {
